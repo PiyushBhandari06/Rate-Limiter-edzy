@@ -35,8 +35,6 @@ setInterval(() => {
   console.log("Cleanup finished. New map size:", rateMap.size);
 }, WINDOW_MS);
 
-
-
 export function rateLimiter(req, res, next) {
   let userId = req.cookies.user_id;
 
@@ -69,14 +67,21 @@ export function rateLimiter(req, res, next) {
 
   // Required headers
   res.setHeader("X-RateLimit-Limit", RATE_LIMIT);
-  res.setHeader("X-RateLimit-Remaining", remaining);     //number
-  res.setHeader("X-RateLimit-Reset", resetSeconds);     //seconds
+  res.setHeader("X-RateLimit-Remaining", remaining); //number
+  res.setHeader("X-RateLimit-Reset", resetSeconds); //seconds
 
   // Enforce limit
   if (record.count > RATE_LIMIT) {
+    const retryAt = record.windowStart + WINDOW_MS;
+
     return res.status(429).json({
       error: "rate_limited",
       message: "Too many requests, please try again later.",
+      rateLimit: {
+        requestsMade: record.count,
+        requestLimit: RATE_LIMIT,
+        retryAt: new Date(retryAt).toLocaleString(),
+      },
     });
   }
 
